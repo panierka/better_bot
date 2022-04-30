@@ -27,5 +27,5 @@ class EconomyCog(commands.Cog):
 
     @commands.command(name='wallet')
     async def wallet(self, ctx: commands.context.Context):
-        items = db.get_user_data(10, 5)
-        await ctx.send(items[0])
+        items = db.get_user_data(str(ctx.author.id), str(ctx.guild.id))
+        await ctx.send(' '.join(map(str, items)))

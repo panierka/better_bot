@@ -29,8 +29,8 @@ class TestTabl1(Base):
 
 class UserProfile(Base):
     __tablename__ = 'user_profile'
-    user_id = Column('user_id', BigInteger)
-    server_id = Column('server_id', BigInteger)
+    user_id = Column('user_id', String(32))
+    server_id = Column('server_id', String(32))
 
     __table_args__ = (
         PrimaryKeyConstraint(user_id, server_id),
@@ -41,8 +41,8 @@ class Wallet(Base):
     __tablename__ = 'wallet'
     id = Column('id', Integer, primary_key=True)
     money = Column('money', Integer)
-    user_id = Column('user_id', BigInteger)
-    server_id = Column('server_id', BigInteger)
+    user_id = Column('user_id', String(32))
+    server_id = Column('server_id', String(32))
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -55,8 +55,8 @@ class Badges(Base):
     id = Column('id', Integer, primary_key=True)
     badge = Column('name', String(64))
     description = Column('description', String(256))
-    user_id = Column('user_id', BigInteger)
-    server_id = Column('server_id', BigInteger)
+    user_id = Column('user_id', String(32))
+    server_id = Column('server_id', String(32))
 
     __table_args__ = (
         ForeignKeyConstraint(
@@ -93,10 +93,17 @@ def get_user_data(user_id, server_id):
     results = query_user_data(server_id, session, user_id)
 
     if len(results) == 0:
+        user_profile = UserProfile()
+        user_profile.user_id = user_id
+        user_profile.server_id = server_id
+        session.add(user_profile)
+        session.commit()
+
         badges = Badges()
         badges.user_id = user_id
         badges.server_id = server_id
         session.add(badges)
+        session.commit()
 
         wallet = Wallet()
         wallet.user_id = user_id
@@ -111,7 +118,7 @@ def get_user_data(user_id, server_id):
 
 
 def query_user_data(server_id, session, user_id):
-    results = session.query(Badges). \
-        join(Wallet, and_(Badges.user_id == Wallet.user_id, Badges.user_id == Wallet.server_id)). \
-        filter(and_(Badges.user_id == user_id, Badges.user_id == server_id)).all()
+    results = session.query(Badges, Wallet). \
+        join(Wallet, and_(Badges.user_id == Wallet.user_id, Badges.server_id == Wallet.server_id)). \
+        filter(and_(Badges.user_id == user_id, Badges.server_id == server_id)).all()
     return results
