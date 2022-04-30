@@ -1,9 +1,9 @@
 import os
 from dotenv import load_dotenv
-import discord
 from discord.ext import commands
 
-from base_cog import BaseCog
+from cogs.base_cog import BaseCog
+from cogs.economy_cog import EconomyCog
 
 
 if __name__ == '__main__':
@@ -12,5 +12,6 @@ if __name__ == '__main__':
     bot = commands.Bot(command_prefix='!', help_command=None)
 
     bot.add_cog(BaseCog(bot))
+    bot.add_cog(EconomyCog(bot))
 
     bot.run(token)
