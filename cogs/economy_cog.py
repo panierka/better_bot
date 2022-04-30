@@ -57,15 +57,13 @@ class EconomyCog(commands.Cog):
         senderid = ctx.author.id
         guid = ctx.guild.id
         amount = int(amount)
+        recipientName: Member = await ctx.guild.fetch_member(int(recipient_id))
 
         # take money from sender
         if self.changeBalance(senderid, guid, -abs(amount)):
 
             # give money to recipient
             self.changeBalance(recipient_id, guid, amount)
-        else:
-            await ctx.send(f'Transfer failed')
+            await ctx.send(f'Transfered {amount} from {senderid} to {recipientName.nick}')
 
-        recipientName: Member = await ctx.guild.fetch_member(int(recipient_id))
-
-        await ctx.send(f'Transfered {amount} from {senderid} to {recipientName.nick}')
+        await ctx.send(f'Transfer failed')
