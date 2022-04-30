@@ -1,3 +1,4 @@
+from discord import User, Member
 from discord.ext import commands
 from tools import database_wrapper as db
 
@@ -14,3 +15,16 @@ class EconomyCog(commands.Cog):
         money = wallet.money
 
         await ctx.send(f'{ctx.author.nick} has {money}$')
+
+    @commands.command(name='test')
+    async def test(self, ctx: commands.context.Context, user: str = ''):
+        if user == '':
+            return
+
+        raw_id = user.lstrip('<@').rstrip('>')
+
+        if not raw_id.isnumeric():
+            return
+
+        member: Member = await ctx.guild.fetch_member(int(raw_id))
+        await ctx.send(f'{member.nick}, id = {raw_id}')
