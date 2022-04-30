@@ -29,8 +29,9 @@ class EconomyCog(commands.Cog):
         member: Member = await ctx.guild.fetch_member(int(raw_id))
         await ctx.send(f'{member.nick}, id = {raw_id}')
 
-    #kuba moment
-    def changeBalance(self, userid, guid, amount):
+    # kuba moment
+    @staticmethod
+    def changeBalance(userid, guid, amount):
         current_amount = db.read_from_table('wallet', userid, guid).money
 
         # break if amount becomes <0
@@ -40,7 +41,8 @@ class EconomyCog(commands.Cog):
         db.update_table('wallet', userid, guid, 'money', current_amount + amount)
         return True
 
-    def checkBalance(self, userid, guid):
+    @staticmethod
+    def checkBalance(userid, guid):
         balance = db.read_from_table('wallet', userid, guid).money
         return balance
 
@@ -51,7 +53,7 @@ class EconomyCog(commands.Cog):
 
         recipient_id = recipient.lstrip('<@').rstrip('>')
 
-        if not recipient_id.isnumeric() or amount.isnumeric():
+        if not recipient_id.isnumeric() or not amount.isnumeric():
             return
 
         senderid = ctx.author.id
@@ -64,6 +66,9 @@ class EconomyCog(commands.Cog):
 
             # give money to recipient
             self.changeBalance(recipient_id, guid, amount)
-            await ctx.send(f'Transfered {amount} from {senderid} to {recipientName.nick}')
+            await ctx.send(f'Transfered {amount}$ '
+                           f'from {ctx.author.nick} ({self.checkBalance(senderid, guid)}$) '
+                           f'to {recipientName.nick} ({self.checkBalance(recipient_id, guid)}$)')
+            return
 
         await ctx.send(f'Transfer failed')
