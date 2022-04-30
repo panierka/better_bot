@@ -8,13 +8,15 @@ class EconomyCog(commands.Cog):
         self.bot = bot
 
     @commands.command(name='wallet', description='cash check')
-    async def wallet(self, ctx: commands.context.Context):
-        items = db.get_user_data(str(ctx.author.id), str(ctx.guild.id))
-        # await ctx.send(' '.join(map(str, items)))
-        wallet: db.Wallet = items['wallet']
-        money = wallet.money
+    async def wallet(self, ctx: commands.context.Context, user: str = ''):
+        if user == "":
+            balance = self.balance_check(ctx.author.id, ctx.guild.id)
+            await ctx.send(f'{ctx.author.nick} has {balance}$')
+            return
 
-        await ctx.send(f'{ctx.author.nick} has {money}$')
+        user_id = self.strip_id(user)
+        balance = self.balance_check(user_id, ctx.guild.id)
+        await ctx.send(f'{self.id_to_nick(user_id)} has {balance}$')
 
     @commands.command(name='test')
     async def test(self, ctx: commands.context.Context, user: str = ''):
@@ -31,44 +33,52 @@ class EconomyCog(commands.Cog):
 
     # kuba moment
     @staticmethod
-    def changeBalance(userid, guid, amount):
-        current_amount = db.read_from_table('wallet', userid, guid).money
+    def balance_change(user_id, guild_id, amount):
+        current_amount = EconomyCog.balance_check(user_id, guild_id)
 
         # break if amount becomes <0
         if current_amount + amount < 0:
             return False
 
-        db.update_table('wallet', userid, guid, 'money', current_amount + amount)
+        db.update_table('wallet', user_id, guild_id, 'money', current_amount + amount)
         return True
 
     @staticmethod
-    def checkBalance(userid, guid):
-        balance = db.read_from_table('wallet', userid, guid).money
+    def balance_check(user_id, guild_id):
+        balance = db.read_from_table('wallet', user_id, guild_id).money
         return balance
+
+    @staticmethod
+    def strip_id(nick):
+        return nick.lstrip('<@').rstrip('>')
+
+    @staticmethod
+    def id_to_nick(ctx, user_id):
+        user: Member = await ctx.guild.fetch_member(int(user_id))
+        return user.nick
 
     @commands.command(name='pay', description='transfer money between users')
     async def pay(self, ctx: commands.context.Context, recipient: str = '', amount: str = ''):
         if recipient == '' or amount == '':
             return
 
-        recipient_id = recipient.lstrip('<@').rstrip('>')
+        recipient_id = self.strip_id(recipient)
 
         if not recipient_id.isnumeric() or not amount.isnumeric():
             return
 
-        senderid = ctx.author.id
-        guid = ctx.guild.id
+        sender_id = ctx.author.id
         amount = int(amount)
-        recipientName: Member = await ctx.guild.fetch_member(int(recipient_id))
+        recipient_name = self.id_to_nick(recipient_id)
 
         # take money from sender
-        if self.changeBalance(senderid, guid, -abs(amount)):
+        if self.balance_change(sender_id, ctx.guild.id, -abs(amount)):
 
             # give money to recipient
-            self.changeBalance(recipient_id, guid, amount)
+            self.balance_change(recipient_id, ctx.guild.id, amount)
             await ctx.send(f'Transfered {amount}$ '
-                           f'from {ctx.author.nick} ({self.checkBalance(senderid, guid)}$) '
-                           f'to {recipientName.nick} ({self.checkBalance(recipient_id, guid)}$)')
+                           f'from {ctx.author.nick} ({self.balance_check(sender_id, ctx.guild.id)}$) '
+                           f'to {recipient_name} ({self.balance_check(recipient_id, ctx.guild.id)}$)')
             return
 
         await ctx.send(f'Transfer failed')
