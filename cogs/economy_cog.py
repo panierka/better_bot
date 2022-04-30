@@ -6,26 +6,11 @@ class EconomyCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @commands.command(name='test_read')
-    async def test_read(self, ctx, table_name: str = ""):
-        if table_name == "":
-            await ctx.send('missing table name')
-            return
-
-        items = db.read_tables(table_name)
-        await ctx.send(', '.join(map(str, items)))
-
-    @commands.command(name='test_write')
-    async def test_write(self, ctx, name: str = ""):
-        if name == "":
-            await ctx.send('missing item name')
-            return
-
-        item = db.TestTabl1()
-        item.name = name
-        db.write_to_table(item)
-
-    @commands.command(name='wallet')
+    @commands.command(name='wallet', description='cash check')
     async def wallet(self, ctx: commands.context.Context):
         items = db.get_user_data(str(ctx.author.id), str(ctx.guild.id))
-        await ctx.send(' '.join(map(str, items)))
+        # await ctx.send(' '.join(map(str, items)))
+        wallet: db.Wallet = items['wallet']
+        money = wallet.money
+
+        await ctx.send(f'{ctx.author.nick} has {money}$')

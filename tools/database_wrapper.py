@@ -114,7 +114,11 @@ def get_user_data(user_id, server_id):
         results = query_user_data(server_id, session, user_id)
 
     session.close()
-    return results
+    dictionary = {
+        'badges' : results[0][0],
+        'wallet' : results[0][1]
+    }
+    return dictionary
 
 
 def query_user_data(server_id, session, user_id):
