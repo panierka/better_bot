@@ -67,62 +67,77 @@ class Badges(Base):
 Base.metadata.create_all(bind=engine)
 Session = sessionmaker(bind=engine)
 
-debug_dict = {
+table_names = {
     'test' : TestTabl1,
     'wallet' : Wallet,
     'user' : UserProfile
 }
 
 
-def read_tables(t):
+def read_from_table(table_key, user_id, server_id):
     session = Session()
-    items = session.query(debug_dict[t]).all()
+    result = get_item(server_id, session, table_key, user_id)
+
     session.close()
-    return items
+    return result
 
 
-def write_to_table(item: Base):
+def get_item(server_id, session, table_key, user_id):
+    t = table_names[table_key]
+    result = session.query(t). \
+        filter(and_(t.user_id == user_id, t.server_id == server_id)).one_or_none()
+    if result is None:
+        create_record(server_id=server_id, session=session, user_id=user_id)
+        result = session.query(t). \
+            filter(and_(t.user_id == user_id, t.server_id == server_id)).one_or_none()
+    return result
+
+
+def update_table(table_key, user_id, server_id, key, value):
     session = Session()
-    session.add(item)
+    result = get_item(server_id, session, table_key, user_id)
+    setattr(result, key, value)
     session.commit()
     session.close()
 
 
 def get_user_data(user_id, server_id):
     session = Session()
-    results = query_user_data(server_id, session, user_id)
+    result = query_user_data(server_id, session, user_id)
 
-    if len(results) == 0:
-        user_profile = UserProfile()
-        user_profile.user_id = user_id
-        user_profile.server_id = server_id
-        session.add(user_profile)
-        session.commit()
-
-        badges = Badges()
-        badges.user_id = user_id
-        badges.server_id = server_id
-        session.add(badges)
-        session.commit()
-
-        wallet = Wallet()
-        wallet.user_id = user_id
-        wallet.server_id = server_id
-        wallet.money = 0
-        session.add(wallet)
-        session.commit()
-        results = query_user_data(server_id, session, user_id)
+    if result is None:
+        create_record(server_id, session, user_id)
+        result = query_user_data(server_id, session, user_id)
 
     session.close()
     dictionary = {
-        'badges' : results[0][0],
-        'wallet' : results[0][1]
+        'badges' : result[0],
+        'wallet' : result[1]
     }
     return dictionary
 
 
+def create_record(server_id, session, user_id):
+    user_profile = UserProfile()
+    user_profile.user_id = user_id
+    user_profile.server_id = server_id
+    session.add(user_profile)
+    session.commit()
+    badges = Badges()
+    badges.user_id = user_id
+    badges.server_id = server_id
+    session.add(badges)
+    session.commit()
+    wallet = Wallet()
+    wallet.user_id = user_id
+    wallet.server_id = server_id
+    wallet.money = 0
+    session.add(wallet)
+    session.commit()
+
+
 def query_user_data(server_id, session, user_id):
-    results = session.query(Badges, Wallet). \
+    result = session.query(Badges, Wallet). \
         join(Wallet, and_(Badges.user_id == Wallet.user_id, Badges.server_id == Wallet.server_id)). \
-        filter(and_(Badges.user_id == user_id, Badges.server_id == server_id)).all()
-    return results
+        filter(and_(Badges.user_id == user_id, Badges.server_id == server_id)).one_or_none()
+    return result
