@@ -28,3 +28,44 @@ class EconomyCog(commands.Cog):
 
         member: Member = await ctx.guild.fetch_member(int(raw_id))
         await ctx.send(f'{member.nick}, id = {raw_id}')
+
+    #kuba moment
+    def changeBalance(self, userid, guid, amount):
+        current_amount = db.read_from_table('wallet', userid, guid).money
+
+        # break if amount becomes <0
+        if current_amount + amount < 0:
+            return False
+
+        db.update_table('wallet', userid, guid, 'money', current_amount + amount)
+        return True
+
+    def checkBalance(self, userid, guid):
+        balance = db.read_from_table('wallet', userid, guid).money
+        return balance
+
+    @commands.command(name='pay', description='transfer money between users')
+    async def pay(self, ctx: commands.context.Context, recipient: str = '', amount: str = ''):
+        if recipient == '' or amount == '':
+            return
+
+        recipient_id = recipient.lstrip('<@').rstrip('>')
+
+        if not recipient_id.isnumeric() or amount.isnumeric():
+            return
+
+        senderid = ctx.author.id
+        guid = ctx.guild.id
+        amount = int(amount)
+
+        # take money from sender
+        if self.changeBalance(senderid, guid, -abs(amount)):
+
+            # give money to recipient
+            self.changeBalance(recipient_id, guid, amount)
+        else:
+            await ctx.send(f'Transfer failed')
+
+        recipientName: Member = await ctx.guild.fetch_member(int(recipient_id))
+
+        await ctx.send(f'Transfered {amount} from {senderid} to {recipientName.nick}')
