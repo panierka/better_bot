@@ -50,7 +50,7 @@ class Wallet(Base):
     )
 
 
-class Badges(Base):
+class Badge(Base):
     __tablename__ = 'badges'
     id = Column('id', Integer, primary_key=True)
     badge = Column('name', String(64))
@@ -64,25 +64,48 @@ class Badges(Base):
     )
 
 
+class RegisteredChannel(Base):
+    __tablename__ = 'channels'
+    id = Column('id', String(32), primary_key=True)
+
+
 Base.metadata.create_all(bind=engine)
 Session = sessionmaker(bind=engine)
 
 table_names = {
     'test' : TestTabl1,
     'wallet' : Wallet,
-    'user' : UserProfile
+    'user' : UserProfile,
+    'badge': Badge,
+    'channel': RegisteredChannel
 }
 
 
-def read_from_table(table_key, user_id, server_id):
+def read_all_rows_from_table(t: type):
     session = Session()
-    result = get_item(server_id, session, table_key, user_id)
+    rows = session.query(t).all()
+    session.close()
+    return rows
+
+
+def write_to_table(item: Base):
+    session = Session()
+
+    if session.query(type(item)).one_or_none() is None:
+        session.add(item)
+        session.commit()
+    session.close()
+
+
+def read_userdata_from_table(table_key, user_id, server_id):
+    session = Session()
+    result = get_item(session, table_key, server_id, user_id)
 
     session.close()
     return result
 
 
-def get_item(server_id, session, table_key, user_id):
+def get_item(session, table_key, server_id, user_id):
     t = table_names[table_key]
     result = session.query(t). \
         filter(and_(t.user_id == user_id, t.server_id == server_id)).one_or_none()
@@ -95,7 +118,7 @@ def get_item(server_id, session, table_key, user_id):
 
 def update_table(table_key, user_id, server_id, key, value):
     session = Session()
-    result = get_item(server_id, session, table_key, user_id)
+    result = get_item(session, table_key, server_id, user_id)
     setattr(result, key, value)
     session.commit()
     session.close()
@@ -123,7 +146,7 @@ def create_record(server_id, session, user_id):
     user_profile.server_id = server_id
     session.add(user_profile)
     session.commit()
-    badges = Badges()
+    badges = Badge()
     badges.user_id = user_id
     badges.server_id = server_id
     session.add(badges)
@@ -137,7 +160,7 @@ def create_record(server_id, session, user_id):
 
 
 def query_user_data(server_id, session, user_id):
-    result = session.query(Badges, Wallet). \
-        join(Wallet, and_(Badges.user_id == Wallet.user_id, Badges.server_id == Wallet.server_id)). \
-        filter(and_(Badges.user_id == user_id, Badges.server_id == server_id)).one_or_none()
+    result = session.query(Badge, Wallet). \
+        join(Wallet, and_(Badge.user_id == Wallet.user_id, Badge.server_id == Wallet.server_id)). \
+        filter(and_(Badge.user_id == user_id, Badge.server_id == server_id)).one_or_none()
     return result

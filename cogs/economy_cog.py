@@ -47,7 +47,7 @@ class EconomyCog(commands.Cog):
 
     @staticmethod
     def balance_check(user_id, guild_id):
-        balance = db.read_from_table('wallet', user_id, guild_id).money
+        balance = db.read_userdata_from_table('wallet', user_id, guild_id).money
         return balance
 
     @staticmethod
