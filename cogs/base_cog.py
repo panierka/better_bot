@@ -10,6 +10,7 @@ class BaseCog(commands.Cog):
         print('bot is ready')
         servers_overview = ', '.join(map(str, self.bot.guilds))
         print('bound servers:', servers_overview)
+        self.bot.get_cog('RewardsCog').award_voicechatters.start()
 
     @commands.command(name='ping', description='checks connection')
     async def ping(self, ctx: commands.context.Context):
