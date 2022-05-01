@@ -20,7 +20,7 @@ class RewardsCog(commands.Cog):
             channel: VoiceChannel = self.bot.get_channel(channel_id)
 
             members = list(filter(lambda x: not x.bot, channel.members))
-            if len(members) >= 1:
+            if len(members) >= 2:
                 economy_cog = self.bot.get_cog('EconomyCog')
                 economy_cog: EconomyCog
                 for member in members:
