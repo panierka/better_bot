@@ -11,7 +11,7 @@ class RewardsCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-    @tasks.loop(seconds=514)
+    @tasks.loop(seconds=257)
     async def award_voicechatters(self):
         rows = read_all_rows_from_table(RegisteredChannel)
         for row in rows:
@@ -24,7 +24,7 @@ class RewardsCog(commands.Cog):
                 economy_cog = self.bot.get_cog('EconomyCog')
                 economy_cog: EconomyCog
                 for member in members:
-                    minimal_wage = 2
+                    minimal_wage = 1
                     current_time_multiplier = await RewardsCog.time_multiplier()
                     total_money = minimal_wage * current_time_multiplier
                     economy_cog.balance_change(member.id, channel.guild.id, total_money)
@@ -34,7 +34,8 @@ class RewardsCog(commands.Cog):
         url = r'http://worldtimeapi.org/api/timezone/Europe/Warsaw'
         try:
             response = requests.get(url).json()
-            matches = re.findall('(?<=T)..', response)
+            date = response['datetime']
+            matches = re.findall('(?<=T)..', date)
             match = matches[0] if matches else None
             match = int(match)
 
