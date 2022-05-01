@@ -15,8 +15,10 @@ class EconomyCog(commands.Cog):
             return
 
         user_id = self.strip_id(user)
+        nick = await self.id_to_nick(ctx, user_id)
         balance = self.balance_check(user_id, ctx.guild.id)
-        await ctx.send(f'{self.id_to_nick(user_id)} has {balance}$')
+
+        await ctx.send(f'{nick} has {balance}$')
 
     @commands.command(name='test')
     async def test(self, ctx: commands.context.Context, user: str = ''):
@@ -53,7 +55,7 @@ class EconomyCog(commands.Cog):
         return nick.lstrip('<@').rstrip('>')
 
     @staticmethod
-    def id_to_nick(ctx, user_id):
+    async def id_to_nick(ctx, user_id):
         user: Member = await ctx.guild.fetch_member(int(user_id))
         return user.nick
 
@@ -69,7 +71,7 @@ class EconomyCog(commands.Cog):
 
         sender_id = ctx.author.id
         amount = int(amount)
-        recipient_name = self.id_to_nick(recipient_id)
+        recipient_name = await self.id_to_nick(ctx, recipient_id)
 
         # take money from sender
         if self.balance_change(sender_id, ctx.guild.id, -abs(amount)):
