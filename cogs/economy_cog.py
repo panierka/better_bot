@@ -127,8 +127,6 @@ class EconomyCog(commands.Cog):
     @staticmethod
     def wealth_status(user_id, guild_id):
         user_wealth = EconomyCog.balance_check(user_id, guild_id)
-        # total_wealth, active_users_num = EconomyCog.guild_wealth(guild_id)
-        # lvl = EconomyCog.check_relative_wealth(user_wealth, total_wealth, active_users_num)
 
         wallets = db.find_active_wallets(server_id=guild_id)
         max_wealth = max(map(lambda x: x.money, wallets))
@@ -139,23 +137,9 @@ class EconomyCog(commands.Cog):
 
         return EconomyCog.wealth_status_emoji(lvl)
 
-    # find all server users with >0$, calculate total server wealth
-    @staticmethod
-    def guild_wealth(guild_id):
-        users = db.find_active_wallets(guild_id)
-        total_wealth = 0
-
-        for user in users:
-            total_wealth += EconomyCog.balance_check(user.user_id, guild_id)
-
-        return total_wealth, len(users)
-
     # compare user wealth to average wealth
     @staticmethod
     def check_relative_wealth(ratio):
-        # avg_wealth = total_wealth // users_num
-        # ratio = user_wealth / avg_wealth
-
         index = int(ratio * 8)
         return index
 
