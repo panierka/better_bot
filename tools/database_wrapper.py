@@ -165,7 +165,10 @@ def query_user_data(server_id, session, user_id):
         filter(and_(Badge.user_id == user_id, Badge.server_id == server_id)).one_or_none()
     return result
 
-def find_active_users(server_id, session):
+
+def find_active_wallets(server_id):
+    session = Session()
     result = session.query(Wallet). \
         filter(and_(Wallet.server_id == server_id, Wallet.money > 0)).all()
+    session.close()
     return result

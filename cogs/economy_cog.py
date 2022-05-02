@@ -22,6 +22,17 @@ class EconomyCog(commands.Cog):
 
         await ctx.send(f'{nick} has {balance}$ {status_emoji}')
 
+    @commands.command(name='burn', description='throw away any amount of your cash')
+    async def burn(self, ctx, amount: int = 0):
+        if amount <= 0:
+            return await ctx.send("can't burn less than 1$")
+
+        uid = ctx.author.id
+        guid = ctx.guild.id
+        EconomyCog.balance_change(uid, guid, -amount)
+        await ctx.send(f'successfully burned {amount}$')
+        await self.wallet(ctx)
+
     @commands.command(name='test')
     async def test(self, ctx: commands.context.Context, user: str = ''):
         if user == '':
@@ -39,13 +50,13 @@ class EconomyCog(commands.Cog):
     @staticmethod
     def balance_change(user_id, guild_id, amount):
         current_amount = EconomyCog.balance_check(user_id, guild_id)
+        target_amount = current_amount + amount
 
         # break if amount becomes <0
-        if current_amount + amount < 0:
-            return False
+        if target_amount < 0:
+            target_amount = 0
 
-        db.update_table('wallet', user_id, guild_id, 'money', current_amount + amount)
-        return True
+        db.update_table('wallet', user_id, guild_id, 'money', target_amount)
 
     @staticmethod
     def balance_check(user_id, guild_id):
@@ -76,31 +87,34 @@ class EconomyCog(commands.Cog):
         recipient_name = await self.id_to_nick(ctx, recipient_id)
 
         # take money from sender
-        if self.balance_change(sender_id, ctx.guild.id, -abs(amount)):
-
-            # give money to recipient
-            self.balance_change(recipient_id, ctx.guild.id, amount)
-            await ctx.send(f'Transfered {amount}$ '
-                           f'from {ctx.author.nick} ({self.balance_check(sender_id, ctx.guild.id)}$) '
-                           f'to {recipient_name} ({self.balance_check(recipient_id, ctx.guild.id)}$)')
-            return
-
-        await ctx.send(f'Transfer failed')
-
+        self.balance_change(sender_id, ctx.guild.id, -abs(amount))
+        # give money to recipient
+        self.balance_change(recipient_id, ctx.guild.id, amount)
+        await ctx.send(f'Transfered {amount}$ '
+                       f'from {ctx.author.nick} ({self.balance_check(sender_id, ctx.guild.id)}$) '
+                       f'to {recipient_name} ({self.balance_check(recipient_id, ctx.guild.id)}$)')
+        return
 
     # relative wealth status display logic
-
     @staticmethod
     def wealth_status(user_id, guild_id):
         user_wealth = EconomyCog.balance_check(user_id, guild_id)
-        total_wealth, active_users_num = EconomyCog.guild_wealth(guild_id)
-        lvl = EconomyCog.check_relative_wealth(user_wealth, total_wealth, active_users_num)
+        # total_wealth, active_users_num = EconomyCog.guild_wealth(guild_id)
+        # lvl = EconomyCog.check_relative_wealth(user_wealth, total_wealth, active_users_num)
+
+        wallets = db.find_active_wallets(server_id=guild_id)
+        max_wealth = max(map(lambda x: x.money, wallets))
+        min_wealth = min(map(lambda x: x.money, wallets))
+
+        normalized_wealth = (user_wealth - min_wealth) / (max_wealth - min_wealth)
+        lvl = EconomyCog.check_relative_wealth(normalized_wealth)
+
         return EconomyCog.wealth_status_emoji(lvl)
 
     # find all server users with >0$, calculate total server wealth
     @staticmethod
     def guild_wealth(guild_id):
-        users = db.find_active_users(guild_id)
+        users = db.find_active_wallets(guild_id)
         total_wealth = 0
 
         for user in users:
@@ -110,28 +124,12 @@ class EconomyCog(commands.Cog):
 
     # compare user wealth to average wealth
     @staticmethod
-    def check_relative_wealth(user_wealth, total_wealth, users_num):
-        avg_wealth = total_wealth // users_num
-        ratio = user_wealth / avg_wealth
+    def check_relative_wealth(ratio):
+        # avg_wealth = total_wealth // users_num
+        # ratio = user_wealth / avg_wealth
 
-        if ratio < 0.001:
-            return 0
-        if ratio < 0.01:
-            return 1
-        if ratio < 0.1:
-            return 2
-        if ratio < 0.5:
-            return 3
-        if ratio < 1.5:
-            return 4
-        if ratio < 10:
-            return 5
-        if ratio < 100:
-            return 6
-        if ratio < 1000:
-            return 7
-        if ratio > 1000:
-            return 8
+        index = int(ratio * 8)
+        return index
 
     @staticmethod
     def wealth_status_emoji(lvl):
@@ -140,5 +138,5 @@ class EconomyCog(commands.Cog):
                        '<:weirdga:845369491793117234>', '<:trollsmile:843465720171855883>', '<:okayge:778544807257440277>',
                        '<:pogCaco:698831786230284318>', '<:knyga:947560578233294848>', '<:POLSKAGUROM:845746986841145355>']
 
-        if len(list_emojis) >=lvl:
+        if len(list_emojis) >= lvl:
             return list_emojis[lvl]
