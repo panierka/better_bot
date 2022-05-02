@@ -11,14 +11,16 @@ class EconomyCog(commands.Cog):
     async def wallet(self, ctx: commands.context.Context, user: str = ''):
         if user == "":
             balance = self.balance_check(ctx.author.id, ctx.guild.id)
-            await ctx.send(f'{ctx.author.nick} has {balance}$')
+            status_emoji = EconomyCog.wealth_status(ctx.author.id, ctx.guild.id)
+            await ctx.send(f'{ctx.author.nick} has {balance}$ {status_emoji}')
             return
 
         user_id = self.strip_id(user)
         nick = await self.id_to_nick(ctx, user_id)
         balance = self.balance_check(user_id, ctx.guild.id)
+        status_emoji = EconomyCog.wealth_status(user_id, ctx.guild.id)
 
-        await ctx.send(f'{nick} has {balance}$')
+        await ctx.send(f'{nick} has {balance}$ {status_emoji}')
 
     @commands.command(name='test')
     async def test(self, ctx: commands.context.Context, user: str = ''):
@@ -33,7 +35,7 @@ class EconomyCog(commands.Cog):
         member: Member = await ctx.guild.fetch_member(int(raw_id))
         await ctx.send(f'{member.nick}, id = {raw_id}')
 
-    # kuba moment
+    # wallet and pay logic
     @staticmethod
     def balance_change(user_id, guild_id, amount):
         current_amount = EconomyCog.balance_check(user_id, guild_id)
@@ -84,3 +86,59 @@ class EconomyCog(commands.Cog):
             return
 
         await ctx.send(f'Transfer failed')
+
+
+    # relative wealth status display logic
+
+    @staticmethod
+    def wealth_status(user_id, guild_id):
+        user_wealth = EconomyCog.balance_check(user_id, guild_id)
+        total_wealth, active_users_num = EconomyCog.guild_wealth(guild_id)
+        lvl = EconomyCog.check_relative_wealth(user_wealth, total_wealth, active_users_num)
+        return EconomyCog.wealth_status_emoji(lvl)
+
+    # find all server users with >0$, calculate total server wealth
+    @staticmethod
+    def guild_wealth(guild_id):
+        users = db.find_active_users(guild_id)
+        total_wealth = 0
+
+        for user in users:
+            total_wealth += EconomyCog.balance_check(user.user_id, guild_id)
+
+        return total_wealth, len(users)
+
+    # compare user wealth to average wealth
+    @staticmethod
+    def check_relative_wealth(user_wealth, total_wealth, users_num):
+        avg_wealth = total_wealth // users_num
+        ratio = user_wealth / avg_wealth
+
+        if ratio < 0.001:
+            return 0
+        if ratio < 0.01:
+            return 1
+        if ratio < 0.1:
+            return 2
+        if ratio < 0.5:
+            return 3
+        if ratio < 1.5:
+            return 4
+        if ratio < 10:
+            return 5
+        if ratio < 100:
+            return 6
+        if ratio < 1000:
+            return 7
+        if ratio > 1000:
+            return 8
+
+    @staticmethod
+    def wealth_status_emoji(lvl):
+        # list of 9 emojis, worst to best
+        list_emojis = ['<:trollgan:840535942006833152>', '<:trollge:818968052388855868>', '<:sadge:778533708135137331>',
+                       '<:weirdga:845369491793117234>', '<:trollsmile:843465720171855883>', '<:okayge:778544807257440277>',
+                       '<:pogCaco:698831786230284318>', '<:knyga:947560578233294848>', '<:POLSKAGUROM:845746986841145355>']
+
+        if len(list_emojis) >=lvl:
+            return list_emojis[lvl]

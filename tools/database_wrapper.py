@@ -164,3 +164,8 @@ def query_user_data(server_id, session, user_id):
         join(Wallet, and_(Badge.user_id == Wallet.user_id, Badge.server_id == Wallet.server_id)). \
         filter(and_(Badge.user_id == user_id, Badge.server_id == server_id)).one_or_none()
     return result
+
+def find_active_users(server_id, session):
+    result = session.query(Wallet). \
+        filter(and_(Wallet.server_id == server_id, Wallet.money > 0)).all()
+    return result
