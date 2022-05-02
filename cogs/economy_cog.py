@@ -1,7 +1,7 @@
 from discord import User, Member
 from discord.ext import commands
 from tools import database_wrapper as db
-
+from tools.superadmin import superadmin
 
 class EconomyCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -84,14 +84,42 @@ class EconomyCog(commands.Cog):
 
         sender_id = ctx.author.id
         amount = int(amount)
-        recipient_name = await self.id_to_nick(ctx, recipient_id)
 
+        current_balance = self.balance_check(sender_id, ctx.guild.id)
+
+        if current_balance < amount:
+            amount = current_balance
+
+        return await self.transfer_money(amount, ctx, recipient_id, sender_id)
+
+    @superadmin
+    @commands.command(name='steal', description='gaming')
+    async def steal(self, ctx, victim: str = '', amount: int = 0):
+        if victim == '':
+            return
+
+        victim_id = self.strip_id(victim)
+
+        if not victim_id.isnumeric():
+            return
+
+        thief_id = ctx.author.id
+        current_balance = self.balance_check(victim_id, ctx.guild.id)
+
+        if current_balance < amount:
+            amount = current_balance
+
+        return await self.transfer_money(amount, ctx, thief_id, victim_id)
+
+    async def transfer_money(self, amount, ctx, recipient_id, sender_id):
         # take money from sender
         self.balance_change(sender_id, ctx.guild.id, -abs(amount))
         # give money to recipient
         self.balance_change(recipient_id, ctx.guild.id, amount)
+        sender_name = await self.id_to_nick(ctx, sender_id)
+        recipient_name = await self.id_to_nick(ctx, recipient_id)
         await ctx.send(f'Transfered {amount}$ '
-                       f'from {ctx.author.nick} ({self.balance_check(sender_id, ctx.guild.id)}$) '
+                       f'from {sender_name} ({self.balance_check(sender_id, ctx.guild.id)}$) '
                        f'to {recipient_name} ({self.balance_check(recipient_id, ctx.guild.id)}$)')
         return
 

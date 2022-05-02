@@ -5,8 +5,9 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-def predicate(ctx: commands.Context):
-    return str(ctx.author.id) == os.getenv('SUPERADMIN_ID')
+async def predicate(ctx: commands.Context):
+    can_proceed = str(ctx.author.id) == os.getenv('SUPERADMIN_ID')
+    return can_proceed
 
 
 superadmin = commands.check(predicate)
